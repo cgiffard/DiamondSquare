@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	    <meta charset="utf-8" />
+	    <title>DiamondSquare</title>
+	</head>
+	<body>
+		<script src="diamondsquare.js"></script>
+		<script>
+			window.addEventListener("load",function init() {
+				var canvas = document.createElement("canvas"),
+					context = canvas.getContext("2d");
+				
+				canvas.width = 256;
+				canvas.height = 256;
+				document.body.appendChild(canvas);
+				
+				var data = [4,1,2,4,
+							1,4,2,2,
+							3,2,1,6,
+							2,1,1,5];
+				
+				data = [];
+				var width = 4, height = 4;
+				
+				while (data.length < width * height)
+					data.push(Math.floor(Math.random()*11));
+				
+				var ds = new DiamondSquare(data,width,height,Math.random());
+					drawDS();
+				
+				var iterations = 6;
+				
+				window.setTimeout(function fisho() {
+					ds.iterate();
+					console.log(ds.width,ds.height);
+					drawDS();
+					
+					if (ds.iteration <= iterations) window.setTimeout(fisho,1000);
+				},1000);
+				
+				
+				function drawDS() {
+					var max = ds.max(),
+						min = ds.min(),
+						dsl = ds.dataStore.length;
+					
+					for (var x = 0; x < canvas.width; x++) {
+						for (var y = 0; y < canvas.height; y++) {
+							var percw = (x+1)/canvas.width,
+								perch = (y+1)/canvas.height,
+								valw = Math.floor(ds.width*percw),
+								valwi = (ds.width*percw) % valw,
+								valh = Math.floor(ds.height*perch),
+								valhi = (ds.height*perch) % valh,
+								cursor = ((valh * ds.width) -1) + valw,
+								cursornw = cursor+1,
+								cursornh = (((valh+1) * ds.width) -1) + valw;
+							
+							if (dsl > cursor) {
+								var col = Math.floor(255 * ((ds.dataStore[cursor]-min)/max)),
+									colnw = col, colnh = col;
+								
+								if (cursornw < dsl)
+									colnw = Math.floor(255 * ((ds.dataStore[cursornw]-min)/max));
+								
+								if (cursornh < dsl)
+									colnh = Math.floor(255 * ((ds.dataStore[cursornh]-min)/max));
+								
+								// Bilinear
+								var bx = Math.min(col,colnw) + 
+											(Math.max(col,colnw) - Math.min(col,colnw)) * valwi;
+								
+								var by = Math.min(col,colnh) + 
+									(Math.max(col,colnh) - Math.min(col,colnh)) * valhi;
+								
+								col = Math.floor((bx + by)/2);
+								
+								context.fillStyle = "rgb("+col+","+col+","+col+")";
+								context.fillRect(x,y,1,1);
+							} else {
+								//console.log("nope");
+							}
+						}
+					}
+							
+				}
+			});
+		</script>
+	</body>
+</html>
