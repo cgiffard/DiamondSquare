@@ -26,64 +26,95 @@
 				while (data.length < width * height)
 					data.push(Math.floor(Math.random()*11));
 				
-				var ds = new DiamondSquare(data,width,height,Math.random());
+				var ds = new DiamondSquare(data,width,height,Math.random()*10);
 					drawDS();
 				
-				var iterations = 6;
+				var iterations = 6, timeBetweenIterations = 50;
 				
 				window.setTimeout(function fisho() {
 					ds.iterate();
-					console.log(ds.width,ds.height);
 					drawDS();
 					
-					if (ds.iteration <= iterations) window.setTimeout(fisho,1000);
-				},1000);
+					if (ds.iteration <= iterations)
+						window.setTimeout(fisho,timeBetweenIterations);
+				},timeBetweenIterations);
 				
 				
 				function drawDS() {
 					var max = ds.max(),
 						min = ds.min(),
-						dsl = ds.dataStore.length;
+						dsl = ds.dataStore.length,
+						dsIndex = 0,
+						x = 0,
+						y = 0,
+						px = 0,
+						py = 0,
+						pixelY = 0,
+						pixelX = 0,
+						pixelXEnd = 0,
+						pixelYEnd = 0,
+						pixelXPerc = 0,
+						pixelYPerc = 0,
+						xRatio = canvas.width / ds.width,
+						yRatio = canvas.height / ds.height,
+						dsval, dsvalNextY, dsvalNextY2, dsvalNextX,
+						dsvalIntX, dsvalIntX2, dsvalIntXY;
 					
-					for (var x = 0; x < canvas.width; x++) {
-						for (var y = 0; y < canvas.height; y++) {
-							var percw = (x+1)/canvas.width,
-								perch = (y+1)/canvas.height,
-								valw = Math.floor(ds.width*percw),
-								valwi = (ds.width*percw) % valw,
-								valh = Math.floor(ds.height*perch),
-								valhi = (ds.height*perch) % valh,
-								cursor = ((valh * ds.width) -1) + valw,
-								cursornw = cursor+1,
-								cursornh = (((valh+1) * ds.width) -1) + valw;
+					var	cw = canvas.width,
+						ch = canvas.height
+						data = context.getImageData(0,0,cw,ch),
+						dataArr = data.data,
+						cursor = 0;
+					
+					function eightBit(inVal) {
+						return ((inVal - min) / (max-min)) * 255 | 0;
+					}
+					
+					for (; dsIndex < dsl; dsIndex ++) {
+						x = dsIndex % ds.width | 0;
+						y = dsIndex / ds.width | 0;
+						pixelX = x * xRatio | 0;
+						pixelY = y * yRatio | 0;
+						pixelXEnd = (x + 1) * xRatio;
+						pixelYEnd = (y + 1) * yRatio;
+						
+						// Calculate values for this iteration...
+						dsval = eightBit(ds.dataStore[dsIndex]);
+						dsvalNextX = dsvalNextY = dsval;
+						
+						if (dsIndex % ds.width-1) {
+							dsvalNextX = eightBit(ds.dataStore[dsIndex+1]);
+						}
+						
+						if (dsl >= dsIndex + ds.width) {
+							dsvalNextY = eightBit(ds.dataStore[dsIndex + ds.width]);
+						}
+						
+						if (dsl >= dsIndex + ds.width + 1)  {
+							dsvalNextY2 = eightBit(ds.dataStore[dsIndex + ds.width + 1]);
+						}
+						
+						for (px = pixelX; px < pixelXEnd; px++) {
 							
-							if (dsl > cursor) {
-								var col = Math.floor(255 * ((ds.dataStore[cursor]-min)/max)),
-									colnw = col, colnh = col;
+							pixelXPerc = (px - pixelX) / (pixelXEnd - pixelX);
+							dsvalIntX = dsval + ((dsvalNextX - dsval) * pixelXPerc);
+							dsvalIntX2 = dsvalNextY + ((dsvalNextY2 - dsvalNextY) * pixelXPerc);
+							
+							for (py = pixelY; py < pixelYEnd; py++) {
+								cursor = (py * cw * 4) + (px * 4);
+								pixelYPerc = (py - pixelY) / (pixelYEnd - pixelY);
+								dsvalIntXY = dsvalIntX + ((dsvalIntX2 - dsvalIntX) * pixelYPerc);
 								
-								if (cursornw < dsl)
-									colnw = Math.floor(255 * ((ds.dataStore[cursornw]-min)/max));
 								
-								if (cursornh < dsl)
-									colnh = Math.floor(255 * ((ds.dataStore[cursornh]-min)/max));
-								
-								// Bilinear
-								var bx = Math.min(col,colnw) + 
-											(Math.max(col,colnw) - Math.min(col,colnw)) * valwi;
-								
-								var by = Math.min(col,colnh) + 
-									(Math.max(col,colnh) - Math.min(col,colnh)) * valhi;
-								
-								col = Math.floor((bx + by)/2);
-								
-								context.fillStyle = "rgb("+col+","+col+","+col+")";
-								context.fillRect(x,y,1,1);
-							} else {
-								//console.log("nope");
+								dataArr[cursor   ] = dsvalIntXY | 0;
+								dataArr[cursor +1] = dsvalIntXY | 0;
+								dataArr[cursor +2] = dsvalIntXY | 0;
+								dataArr[cursor +3] = 255;
 							}
 						}
 					}
-							
+					
+					context.putImageData(data, 0, 0);
 				}
 			});
 		</script>
